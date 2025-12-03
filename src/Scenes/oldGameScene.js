@@ -15,18 +15,6 @@ class GameScene extends Phaser.Scene {
     this.load.image("fish4", "assets/fish4.png");
     this.load.image("fish5", "assets/fish5.png");
     this.load.image("fish6", "assets/fish6.png");
-
-    //eatFish effect
-    this.load.image("eatFish", "assets/magic_03.png"); 
-
-    //Powerup
-    this.load.image("powerupSlow", "assets/muzzle_01.png"); 
-
-    //SFX
-    this.load.audio("eatSfx", "assets/drop_004.ogg"); 
-    this.load.audio("powerupSfx", "assets/maximize_004.ogg"); 
-    this.load.audio("eaten", "assets/pluck_001.ogg"); 
-
   }
 
   create() {
@@ -65,12 +53,9 @@ class GameScene extends Phaser.Scene {
     this.player.sizeLevel = 1;
     this.player.maxSizeLevel = 6;
     this.player.eatenInLevel = 0;
-    this.playerHealth = 50;
+    this.playerHealth = 5;
     this.player.invincible = false;
     this.score = 0;
-
-    //this.playerBaseSpeed  = 120;  // minimum bounce speed
-    //this.playerSpeedBonus = 0; 
 
     this.player.body.onWorldBounds = true;
     this.physics.world.on(
@@ -92,7 +77,7 @@ class GameScene extends Phaser.Scene {
 
     // initial speed
     this.player.setVelocity(150, -150);  //right, up
-    //this.player.body.maxVelocity.set(150, 150);
+    this.player.body.maxVelocity.set(150, 150);
 
     // controls
     this.keys = this.input.keyboard.addKeys({
@@ -104,17 +89,6 @@ class GameScene extends Phaser.Scene {
 
     // npc fish
     this.fishGroup = this.physics.add.group({ allowGravity: false });
-
-    this.powerupGroup = this.physics.add.group({ allowGravity: false });
-
-    this.physics.add.overlap(
-      this.player,
-      this.powerupGroup,
-      this.handlePlayerPowerup,
-      null,
-      this
-    );
-
 
     // controllable bounce off platform
     this.physics.add.collider(
@@ -150,21 +124,14 @@ class GameScene extends Phaser.Scene {
       loop: true,
     });
 
-    this.powerupTimer = this.time.addEvent({
-      delay: 10000,              // every 10 seconds
-      callback: this.spawnPowerup,
-      callbackScope: this,
-      loop: true,
-    });
-
     // grow requirement level: eatfishcount
     this.levelRequirements = {
       1: 1,
       2: 1,
       3: 1,
-      4: 1,
-      5: 1,
-      6: 1
+      4: 2,
+      5: 2,
+      6: 2
     };
 
     // HUD
@@ -172,7 +139,6 @@ class GameScene extends Phaser.Scene {
     this.healthText = this.add.text(16, 16, "", style);
     this.sizeText = this.add.text(16, 40, "", style);
     this.scoreText = this.add.text(16, 64, "", style);
-    this.levelText = this.add.text(width - 16, 16, "", style).setOrigin(1, 0);
     this._refreshHUD();
   }
 
@@ -204,30 +170,20 @@ class GameScene extends Phaser.Scene {
     });
   }
 
-_updatePlayerScale() {
-  const baseScale = 0.7;
-  const step = 0.2;
-
-  this.player.setScale(baseScale + step * (this.player.sizeLevel - 1));
-
-  const displayW = this.player.displayWidth;
-  const displayH = this.player.displayHeight;
-
-  const hitW = displayW * 0.7;  
-  const hitH = displayH * 0.7;  
-
-  this.player.body.setSize(hitW, hitH, true);  
-}
+  _updatePlayerScale() {
+    const baseScale = 0.6;
+    const step = 0.2;
+    this.player.setScale(baseScale + step * (this.player.sizeLevel - 1));
+    const r = (this.player.width * this.player.scaleX) / 2;
+    this.player.body.setCircle(r);
+  }
 
   _refreshHUD() {
       this.healthText.setText("Health: " + this.playerHealth);
       this.sizeText.setText("Size: " + this.player.sizeLevel);
       if (this.scoreText) {
         this.scoreText.setText("Score: " + this.score);
-      }
-      if (this.levelText) {
-        this.levelText.setText("Level: " + this.player.sizeLevel);
-      }
+  }
 }
   spawnFish() {
     const { width, height } = this.scale;
@@ -263,8 +219,8 @@ _updatePlayerScale() {
     fish.setScale(baseScale + step * (sizeLevel - 1));
 
     // slower swim, smaller fish faster
-    const baseSpeed = 25;
-    const extraSpeed = (6 - sizeLevel) * 15;
+    const baseSpeed = 40;
+    const extraSpeed = (6 - sizeLevel) * 25;
     const speed = baseSpeed + extraSpeed;
 
     const vx = fromLeft ? speed : -speed;
@@ -281,19 +237,8 @@ handlePlayerPlatform(player, platform) {
     const relative = (player.x - platform.x) / (platform.body.width / 2);
     const clamped = Phaser.Math.Clamp(relative, -1, 1);
 
-    // base speed grow as fish are eaten
-    //const minSpeed = this.playerBaseSpeed + this.playerSpeedBonus;
-    //const maxSpeed = minSpeed + 120; 
-    //const targetSpeed = this.playerBaseSpeed + this.playerSpeedBonus;
-    //Come on fish please speed up
-    const baseSpeed   = 140;
-    const perLevelAdd = 800;   
-
-    const targetSpeed = baseSpeed + perLevelAdd * (this.player.sizeLevel - 1);
-
-
     const currentSpeed = player.body.velocity.length();
-    //const targetSpeed = Phaser.Math.Clamp(currentSpeed, minSpeed, maxSpeed);
+    const targetSpeed = Phaser.Math.Clamp(currentSpeed, 180, 240);
 
     const horizontalFactor = 1.2;
     let vx = targetSpeed * clamped * horizontalFactor;
@@ -306,60 +251,7 @@ handlePlayerPlatform(player, platform) {
   }
 }
 
-
-spawnPowerup() {
-  const { width, height } = this.scale;
-  const x = Phaser.Math.Between(80, width - 80);
-  const y = Phaser.Math.Between(80, height / 2);
-
-  const p = this.powerupGroup.create(x, y, "powerupSlow");
-  p.setScale(0.1);
-  p.setCollideWorldBounds(true);
-  p.setBounce(1, 1);
-  p.setVelocity(
-    Phaser.Math.Between(-40, 40),
-    Phaser.Math.Between(-20, 20)
-  );
-}
-
-
-
-handlePlayerPowerup(player, powerup) {
-  powerup.destroy();
-
-  if (this.sound) {
-    this.sound.play("powerupSfx", { volume: 0.6 });
-  }
-
-  // slow all enemy fish for 6 seconds
-  this._applySlowToFish(0.4, 6000);
-}
-
-
-_applySlowToFish(multiplier, duration) {
-  this.fishGroup.getChildren().forEach(fish => {
-    if (!fish.body) return;
-
-    // store original velocity once
-    if (fish.body._origVx === undefined) {
-      fish.body._origVx = fish.body.velocity.x;
-    }
-    fish.setVelocityX(fish.body.velocity.x * multiplier);
-  });
-
-  this.time.delayedCall(duration, () => {
-    this.fishGroup.getChildren().forEach(fish => {
-      if (!fish.body) return;
-      if (fish.body._origVx !== undefined) {
-        fish.setVelocityX(fish.body._origVx);
-        delete fish.body._origVx;
-      }
-    });
-  });
-}
-
-
-handlePlayerVsFish(player, fish) {
+  handlePlayerVsFish(player, fish) {
     if (player.invincible) {
       if (player.sizeLevel >= fish.sizeLevel) {
         fish.destroy(); 
@@ -369,19 +261,12 @@ handlePlayerVsFish(player, fish) {
 
     if (player.sizeLevel >= fish.sizeLevel) {
       const eatenLevel = fish.sizeLevel;
-     
-      this._playEatEffect(fish.x, fish.y);
-      if (this.sound) {
-        this.sound.play("eatSfx", { volume: 0.5 });
-      }
-
       fish.destroy();
       this.score += eatenLevel * 10;
       this._refreshHUD();
       // only count same size fish toward growth
       if (eatenLevel === player.sizeLevel) {
         player.eatenInLevel += 1;
-        this.playerSpeedBonus += 250; 
 
         const needed = this.levelRequirements[player.sizeLevel] || Infinity;
 
@@ -394,30 +279,11 @@ handlePlayerVsFish(player, fish) {
           this._updatePlayerScale();
           this._refreshHUD();
 
-        if (player.sizeLevel === player.maxSizeLevel) {
-          // camera shake for level complete
-          this.cameras.main.shake(300, 0.01);
-
-          // show a "you win" banner, enter to play again
-          const banner = this.add.text(
-            this.scale.width / 2,
-            this.scale.height / 2,
-            "Max Size!",
-            {
-              fontSize: "40px",
-              fill: "#ffff66",
-              align: "center"
-            }
-          ).setOrigin(0.5);
-
-          // after a few seconds, go to GameOverScene
-          this.time.delayedCall(2000, () => {
+          if (player.sizeLevel === player.maxSizeLevel) {
             this.scene.start("GameOverScene", { result: "win", score: this.score });
-          });
-
-          console.log("win");
-          return;
-        }
+            console.log("win");
+            return;
+          }
         }
       }
 
@@ -432,14 +298,12 @@ handlePlayerVsFish(player, fish) {
     this.playerHealth -= 1;
     this._refreshHUD();
     this._showDamageText(player.x, player.y);
-    if (this.sound) {
-      this.sound.play("eaten", { volume: 0.6 });
-    }
+
     // set invincibility for 1 sec
     player.invincible = true;
     player.setAlpha(0.5);
 
-    this.time.delayedCall(500, () => {
+    this.time.delayedCall(1000, () => {
       player.invincible = false;
       player.setAlpha(1);
     });
@@ -477,24 +341,6 @@ handlePlayerVsFish(player, fish) {
       this.scene.start("GameOverScene", { result: "lose" });
     }
   }
-
-
-  _playEatEffect(x, y) {
-  const flash = this.add.image(x, y, "eatFish")
-    .setScale(0.4)
-    .setTint(0xffff66)
-    .setAlpha(0.8);
-
-  this.tweens.add({
-    targets: flash,
-    scale: 0.1,
-    alpha: 0,
-    duration: 200,
-    ease: "Cubic.easeOut",
-    onComplete: () => flash.destroy()
-  });
-}
-
 
   _showDamageText(x, y) {
     const txt = this.add.text(x, y - 20, "-1 HP", {
