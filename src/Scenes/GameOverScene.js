@@ -13,26 +13,26 @@ class GameOverScene extends Phaser.Scene {
     this.add
       .text(width / 2, height / 2 - 60, resultText, {
         fontSize: "40px",
-        fill: "#ffffff"
+        fill: "#ffffee"
       })
       .setOrigin(0.5);
 
     this.add
-      .text(width / 2, height / 2 - 10, `Score: ${score}`, {
+      .text(width / 2, height / 2 - 5, `Score: ${score}`, {
         fontSize: "28px",
         fill: "#ffff66"
       })
       .setOrigin(0.5);
 
     const playAgain = this.add
-      .text(width / 2, height / 2 + 50, "Press ENTER to Play Again", {
+      .text(width / 2, height / 2 + 50, "Press ENTER to Go Back to Start", {
         fontSize: "28px",
-        fill: "#00ffcc"
+        fill: "#45e2c3ff"
       })
       .setOrigin(0.5)
 
     this.input.keyboard.once("keydown-ENTER", () => {
-      this.scene.start("GameScene"); // restart the game
+      this.scene.start("GameStartScene");
     });
   }
 }
